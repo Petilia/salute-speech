@@ -39,6 +39,9 @@ def generate_audio_chunks(path, chunk_size=CHUNK_SIZE, sleep_time=SLEEP_TIME):
 
 
 def recognize(args):
+
+    text = ""
+
     ssl_cred = grpc.ssl_channel_credentials(
         root_certificates=open(args.ca, 'rb').read() if args.ca else None,
     )
@@ -65,8 +68,13 @@ def recognize(args):
             else:
                 print('Got end-of-utterance result:')
 
+            # for i, hyp in enumerate(resp.results):
+            #     print('  Hyp #{}: {}'.format(i + 1, hyp.normalized_text if args.normalized_result else hyp.text))
+
             for i, hyp in enumerate(resp.results):
                 print('  Hyp #{}: {}'.format(i + 1, hyp.normalized_text if args.normalized_result else hyp.text))
+                text = hyp.normalized_text if args.normalized_result else hyp.text
+                break
 
             if resp.eou and args.emotions_result:
                 print('  Emotions: pos={}, neu={}, neg={}'.format(
@@ -74,15 +82,22 @@ def recognize(args):
                     resp.emotions_result.neutral,
                     resp.emotions_result.negative,
                 ))
+
+            return text
+
     except grpc.RpcError as err:
         print('RPC error: code = {}, details = {}'.format(err.code(), err.details()))
+        return text
     except Exception as exc:
         print('Exception:', exc)
+        return text
     else:
         print('Recognition has finished')
+        return text
     finally:
         try_printing_request_id(con.initial_metadata())
         channel.close()
+        return text
 
 
 class Arguments:
